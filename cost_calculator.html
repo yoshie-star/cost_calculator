@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>シンプル原価計算</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      background: #fdf6ef;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      padding: 20px 16px;
+    }
+    .card {
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+      padding: 24px;
+      width: 100%;
+      max-width: 480px;
+    }
+    h1 {
+      font-size: 1.6rem;
+      color: #4a3728;
+      margin-bottom: 16px;
+      text-align: center;
+      letter-spacing: 0.05em;
+    }
+
+    /* タブ */
+    .tabs {
+      display: flex;
+      background: #ede6df;
+      border-radius: 10px;
+      padding: 4px;
+      margin-bottom: 16px;
+      gap: 4px;
+    }
+    .tab-btn {
+      flex: 1;
+      padding: 8px 0;
+      font-size: 1rem;
+      font-weight: 700;
+      color: #a08070;
+      background: none;
+      border: none;
+      border-radius: 7px;
+      cursor: pointer;
+      transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+    }
+    .tab-btn.active {
+      background: #fff;
+      color: #b05c30;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.12);
+    }
+
+    .section-label {
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: #9b7e6e;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 8px;
+    }
+    .section {
+      margin-bottom: 16px;
+    }
+    .field-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 6px;
+    }
+    .field-row label {
+      font-size: 1rem;
+      color: #5a4a42;
+      width: 95px;
+      flex-shrink: 0;
+    }
+    input[type="number"], input[type="text"] {
+      border: 1.5px solid #d9cfc8;
+      border-radius: 8px;
+      padding: 6px 12px;
+      font-size: 1.1rem;
+      width: 120px;
+      color: #3a2e28;
+      background: #faf8f6;
+      transition: border-color 0.2s;
+      -moz-appearance: textfield;
+      text-align: right;
+    }
+    input[type="number"]::-webkit-outer-spin-button,
+    input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
+    input[type="number"]:focus, input[type="text"]:focus {
+      outline: none;
+      border-color: #c09070;
+    }
+    .unit {
+      font-size: 1rem;
+      color: #9b7e6e;
+    }
+    .divider {
+      border: none;
+      border-top: 1px solid #ede6df;
+      margin: 14px 0;
+    }
+    .result-box {
+      background: #fdf6ef;
+      border: 1.5px solid #e8d5c0;
+      border-radius: 12px;
+      padding: 16px;
+    }
+    .result-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    .result-row:last-child { margin-bottom: 0; }
+    .result-label {
+      font-size: 1rem;
+      color: #6b5045;
+    }
+    .result-value {
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: #4a3728;
+    }
+    .result-value.main {
+      font-size: 1.7rem;
+      color: #b05c30;
+    }
+    .empty-msg {
+      text-align: center;
+      color: #b0a090;
+      font-size: 0.9rem;
+      padding: 8px 0;
+    }
+
+    /* タブパネル */
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>✂️ シンプル原価計算 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 36 36" width="1.1em" height="1.1em" style="vertical-align:-0.15em;display:inline-block;">
+  <path d="M13 14 Q13 8 18 8 Q23 8 23 14" fill="none" stroke="#c8a882" stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M6 14 H30 L28 24 H8 Z" fill="#c0392b"/>
+  <path d="M8 24 H28 L27 31 Q27 32 26 32 H10 Q9 32 9 31 Z" fill="#c8a882"/>
+  <line x1="8" y1="24" x2="28" y2="24" stroke="#a0826a" stroke-width="0.8"/>
+  <rect x="15.5" y="21" width="5" height="3.5" rx="1" fill="#e8c89a" stroke="#a0826a" stroke-width="0.6"/>
+</svg></h1>
+
+    <div class="tabs">
+      <button class="tab-btn active" onclick="switchTab('area')">📐 面積計算</button>
+      <button class="tab-btn" onclick="switchTab('length')">🧵 長さ計算</button>
+    </div>
+
+    <!-- 面積計算 -->
+    <div id="panel-area" class="tab-panel active">
+      <div class="section">
+        <div class="section-label">素材設定</div>
+        <div class="field-row">
+          <label>縦サイズ</label>
+          <input type="text" id="matH" value="100.0" inputmode="numeric">
+          <span class="unit">cm</span>
+        </div>
+        <div class="field-row">
+          <label>横サイズ</label>
+          <input type="text" id="matW" value="100.0" inputmode="numeric">
+          <span class="unit">cm</span>
+        </div>
+        <div class="field-row">
+          <label>価格（税抜）</label>
+          <input type="number" id="matPrice" min="0" step="1" placeholder="例: 902">
+          <span class="unit">円</span>
+        </div>
+        <div class="field-row">
+          <label>消費税率</label>
+          <input type="number" id="taxRate" value="10" min="0" step="1">
+          <span class="unit">%</span>
+        </div>
+      </div>
+
+      <hr class="divider">
+
+      <div class="section">
+        <div class="section-label">切り出しサイズ</div>
+        <div class="field-row">
+          <label>縦</label>
+          <input type="text" id="cutH" placeholder="0.0" inputmode="numeric">
+          <span class="unit">cm</span>
+        </div>
+        <div class="field-row">
+          <label>横</label>
+          <input type="text" id="cutW" placeholder="0.0" inputmode="numeric">
+          <span class="unit">cm</span>
+        </div>
+      </div>
+
+      <hr class="divider">
+
+      <div class="result-box" id="resultBoxArea">
+        <div class="empty-msg">縦・横を入力すると原価が表示されます</div>
+      </div>
+    </div>
+
+    <!-- 長さ計算 -->
+    <div id="panel-length" class="tab-panel">
+      <div class="section">
+        <div class="section-label">素材設定</div>
+        <div class="field-row">
+          <label>総長さ</label>
+          <input type="text" id="lenTotal" value="100.0" inputmode="numeric">
+          <span class="unit">cm</span>
+        </div>
+        <div class="field-row">
+          <label>価格（税抜）</label>
+          <input type="number" id="lenPrice" min="0" step="1" placeholder="例: 500">
+          <span class="unit">円</span>
+        </div>
+        <div class="field-row">
+          <label>消費税率</label>
+          <input type="number" id="lenTaxRate" value="10" min="0" step="1">
+          <span class="unit">%</span>
+        </div>
+      </div>
+
+      <hr class="divider">
+
+      <div class="section">
+        <div class="section-label">切り出しサイズ</div>
+        <div class="field-row">
+          <label>長さ</label>
+          <input type="text" id="lenUse" placeholder="0.0" inputmode="numeric">
+          <span class="unit">cm</span>
+        </div>
+      </div>
+
+      <hr class="divider">
+
+      <div class="result-box" id="resultBoxLength">
+        <div class="empty-msg">使用長さを入力すると原価が表示されます</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ---- タブ切り替え ----
+    function switchTab(tab) {
+      document.querySelectorAll('.tab-btn').forEach((btn, i) => {
+        btn.classList.toggle('active', (i === 0) === (tab === 'area'));
+      });
+      document.getElementById('panel-area').classList.toggle('active', tab === 'area');
+      document.getElementById('panel-length').classList.toggle('active', tab === 'length');
+    }
+
+    // ---- 価格をlocalStorageで保存・復元 ----
+    ['matPrice', 'lenPrice'].forEach(id => {
+      const el = document.getElementById(id);
+      const saved = localStorage.getItem(id);
+      if (saved) el.value = saved;
+      el.addEventListener('input', () => localStorage.setItem(id, el.value));
+    });
+
+    // ---- 小数点整形（blur時に小数点第1位へ） ----
+    function setupDecimalBlur(id) {
+      const el = document.getElementById(id);
+      el.addEventListener('blur', function() {
+        const v = parseFloat(this.value);
+        if (!isNaN(v)) this.value = v.toFixed(1);
+      });
+    }
+    ['matH', 'matW', 'cutH', 'cutW', 'lenTotal', 'lenUse'].forEach(setupDecimalBlur);
+
+    // ---- 面積計算 ----
+    ['matH', 'matW', 'cutH', 'cutW', 'matPrice', 'taxRate'].forEach(id => {
+      document.getElementById(id).addEventListener('input', calcArea);
+    });
+
+    function calcArea() {
+      const matH = parseFloat(document.getElementById('matH').value);
+      const matW = parseFloat(document.getElementById('matW').value);
+      const matPrice = parseFloat(document.getElementById('matPrice').value);
+      const taxRate = parseFloat(document.getElementById('taxRate').value);
+      const cutH = parseFloat(document.getElementById('cutH').value);
+      const cutW = parseFloat(document.getElementById('cutW').value);
+      const box = document.getElementById('resultBoxArea');
+
+      if (!cutH || !cutW || !matH || !matW || !matPrice) {
+        box.innerHTML = '<div class="empty-msg">縦・横を入力すると原価が表示されます</div>';
+        return;
+      }
+
+      const matArea = matH * matW;
+      const cutArea = cutH * cutW;
+      const ratio = cutArea / matArea;
+      const costEx = matPrice * ratio;
+      const tax = isNaN(taxRate) ? 0 : taxRate;
+      const costIn = costEx * (1 + tax / 100);
+
+      box.innerHTML = `
+        <div class="result-row">
+          <div class="result-label">原価（税抜）</div>
+          <div class="result-value">${fmt(costEx)} 円</div>
+        </div>
+        <div class="result-row">
+          <div class="result-label">原価（税込 ${tax}%）</div>
+          <div class="result-value main">${fmt(costIn)} 円</div>
+        </div>
+        <div class="result-row" style="margin-top:16px;padding-top:14px;border-top:1px solid #e8d5c0;">
+          <div class="result-label">面積比</div>
+          <div class="result-value" style="font-size:1rem;">${(ratio * 100).toFixed(2)} %</div>
+        </div>
+        <div class="result-row">
+          <div class="result-label">切り出し面積</div>
+          <div class="result-value" style="font-size:1rem;">${cutArea.toFixed(2)} cm²</div>
+        </div>
+      `;
+    }
+
+    // ---- 長さ計算 ----
+    ['lenTotal', 'lenUse', 'lenPrice', 'lenTaxRate'].forEach(id => {
+      document.getElementById(id).addEventListener('input', calcLength);
+    });
+
+    function calcLength() {
+      const total = parseFloat(document.getElementById('lenTotal').value);
+      const price = parseFloat(document.getElementById('lenPrice').value);
+      const taxRate = parseFloat(document.getElementById('lenTaxRate').value);
+      const use = parseFloat(document.getElementById('lenUse').value);
+      const box = document.getElementById('resultBoxLength');
+
+      if (!use || !total || !price) {
+        box.innerHTML = '<div class="empty-msg">使用長さを入力すると原価が表示されます</div>';
+        return;
+      }
+
+      const ratio = use / total;
+      const costEx = price * ratio;
+      const tax = isNaN(taxRate) ? 0 : taxRate;
+      const costIn = costEx * (1 + tax / 100);
+
+      box.innerHTML = `
+        <div class="result-row">
+          <div class="result-label">原価（税抜）</div>
+          <div class="result-value">${fmt(costEx)} 円</div>
+        </div>
+        <div class="result-row">
+          <div class="result-label">原価（税込 ${tax}%）</div>
+          <div class="result-value main">${fmt(costIn)} 円</div>
+        </div>
+        <div class="result-row" style="margin-top:16px;padding-top:14px;border-top:1px solid #e8d5c0;">
+          <div class="result-label">長さ比</div>
+          <div class="result-value" style="font-size:1rem;">${(ratio * 100).toFixed(2)} %</div>
+        </div>
+      `;
+    }
+
+    function fmt(n) {
+      return n.toFixed(2);
+    }
+  </script>
+</body>
+</html>
